@@ -1,0 +1,17 @@
+# Build output
+bin/
+obj/
+
+# macOS system files
+.DS_Store
+
+# Visual Studio Code settings
+.vscode/
+
+# User-specific files
+*.user
+*.swp
+*.log
+
+# Local environment settings (не отправляем на GitHub)
+appsettings.Development.json
