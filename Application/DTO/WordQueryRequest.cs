@@ -1,10 +1,11 @@
 namespace LangSaver.Application.DTO;
-public class WordQueryRequest
+public class WordQueryRequest : IWordLookupRequest
 {
     
-    public string Name {get; set; }
-    public string From {get; set; }
-    public string To   {get; set; }
+    public string Term {get; set; }
+    public string FromLanguage {get; set; }
+    public string ToLanguage   {get; set; }
     public string? Category {get; set; }
 
+    public string Language => FromLanguage;
 }

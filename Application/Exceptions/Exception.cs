@@ -10,4 +10,12 @@ namespace LangSaver.Application.Exceptions
             
         }
     }
+    public class NotExistingWordException : Exception
+    {
+
+        public NotExistingWordException(string message) : base(message)
+        {
+            
+        }
+    }
 }
