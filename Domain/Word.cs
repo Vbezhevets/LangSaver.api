@@ -6,7 +6,7 @@ public class Word
     public string Term { get; set; }     // "run"
     public string Language { get; set; }     // "en"
 
-    public List <Word> Translations { get; set; } = new();
+    public List <Word> Translations { get; set; } = new(); 
 
     public string? Category { get; set; } // verbs, nouns, etc.
 
