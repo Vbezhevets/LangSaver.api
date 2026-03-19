@@ -1,12 +1,19 @@
 # LangSaver API
 
-LangSaver API is a backend service built with **.NET 8 Minimal API**.  
-It provides endpoints for managing words, translations, categories, and language directions, and uses PostgreSQL as the underlying data store.
+Backend API for saving and managing vocabulary with user authentication.
 
-## Tech Stack
-- .NET 8 Minimal API  
-- C# 12  
-- Entity Framework Core (PostgreSQL)
+## Features
+- User authentication
+- Add / update / delete words
+- Store translations
+- RESTful API
 
-## License
-MIT License
+## Tech stack
+- ASP.NET Core
+- Entity Framework
+- PostgreSQL (или что у тебя)
+
+## Example endpoints
+POST /api/words
+GET /api/words
+DELETE /api/words/{id}
