@@ -1,19 +1,21 @@
 # LangSaver API
 
-Backend API for saving and managing vocabulary with user authentication.
+Backend project built with ASP.NET Core.
 
-## Features
-- User authentication
-- Add / update / delete words
-- Store translations
-- RESTful API
+## Status
+⚠️ Work in progress
+
+Currently implemented:
+- User registration (JWT)
+- Login
+- Basic API structure
+- PostgreSQL integration
 
 ## Tech stack
-- ASP.NET Core
-- Entity Framework
-- PostgreSQL (или что у тебя)
+- ASP.NET Core (.NET 8)
+- Entity Framework Core
+- PostgreSQL
+- JWT Authentication
 
-## Example endpoints
-POST /api/words
-GET /api/words
-DELETE /api/words/{id}
+## Notes
+This project is under active development as part of my backend learning path.
