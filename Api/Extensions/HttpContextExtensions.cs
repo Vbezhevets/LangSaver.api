@@ -8,7 +8,7 @@ public static class HttpContextExtensions
         var id = context.User.FindFirstValue(ClaimTypes.NameIdentifier)  // we don't use ASP.NET Identity? so:
                  ?? context.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-        return Guid.Parse(id);
+        return Guid.Parse(id!);
     }
 }
  
