@@ -1,21 +1,21 @@
 # LangSaver API
 
-Backend project built with ASP.NET Core.
+Backend project built with ASP.NET Core for managing a personal vocabulary database.
 
 ## Status
 ⚠️ Work in progress
 
 Currently implemented:
-- User registration (JWT)
-- Login
-- Basic API structure
-- PostgreSQL integration
-
+- User registration and login
+- JWT-based authentication
+- Protected word endpoints
+- Word creation, lookup, category update and deletion
+- Basic translation workflow with a temporary mock translator
+- PostgreSQL integration with Entity Framework Core
+ 
 ## Tech stack
 - ASP.NET Core (.NET 8)
 - Entity Framework Core
 - PostgreSQL
 - JWT Authentication
-
-## Notes
-This project is under active development as part of my backend learning path.
+- Argos Translate  
