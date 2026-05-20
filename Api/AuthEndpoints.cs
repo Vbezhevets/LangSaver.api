@@ -22,12 +22,36 @@ public static class AuthEndpoints
             var email = (req.Email ?? "").Trim().ToLowerInvariant();
             var password = req.Password ?? "";
 
-        if (!email.Contains('@') || password.Length < 6)
-            return Results.BadRequest(new { message = "Invalid email or password too short" });
+            if (string.IsNullOrWhiteSpace(email))
+                return Results.BadRequest(new { message = "Email is required." });
+
+            if (!email.Contains('@') || !email.Contains('.'))
+                return Results.BadRequest(new { message = "Email must be a valid email address." });
+
+            if (email.Length > 255)
+                return Results.BadRequest(new { message = "Email must not exceed 255 characters." });
+
+            if (email.Any(char.IsWhiteSpace))
+                return Results.BadRequest(new { message = "Email must not contain whitespace." });
+
+            if (string.IsNullOrWhiteSpace(password))
+                return Results.BadRequest(new { message = "Password is required." });
+
+            if (password.Length < 8)
+                return Results.BadRequest(new { message = "Password must be at least 8 characters long." });
+
+            if (password.Length > 100)
+                return Results.BadRequest(new { message = "Password must not exceed 100 characters." });
+
+            if (!password.Any(char.IsLetter))
+                return Results.BadRequest(new { message = "Password must contain at least one letter." });
+
+            if (!password.Any(char.IsDigit))
+                return Results.BadRequest(new { message = "Password must contain at least one digit." });
 
             var exists = await db.Users.AnyAsync(u => u.Email == email);
             if (exists)
-                return Results.Conflict(new { message = "User already exists" });
+                return Results.Conflict(new { message = "User already exists." });
 
             var user = new User { Email = email };
             user.PasswordHash = hasher.HashPassword(user, password);
@@ -36,6 +60,7 @@ public static class AuthEndpoints
             await db.SaveChangesAsync();
 
             var token = jwt.GenerateAccessToken(user.Id);
+
             return Results.Ok(new { userId = user.Id, accessToken = token });
         });
 

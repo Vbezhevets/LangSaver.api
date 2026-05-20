@@ -1,3 +1,5 @@
+namespace LangSaver.Api;
+
 public class JwtSettings
 {
     public string Issuer { get; set; } = "";

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Langsaver.Api;
+namespace LangSaver.Api;
 
 public static class ServiceCollectionExtensions
 {
@@ -33,7 +33,10 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<JwtSettings>(configuration.GetSection("JwtSettings")); //ready settings
-        var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>()!; //читает из settings.json и мэпит в объект - по сути получаем нужный объект из настройек
+        var jwtSettings = configuration
+            .GetSection("JwtSettings")
+            .Get<JwtSettings>()
+            ?? throw new InvalidOperationException("JwtSettings section is missing.");
     
     services
         .AddAuthentication("Bearer")
@@ -42,7 +45,7 @@ public static class ServiceCollectionExtensions
             options.TokenValidationParameters = new ()
             {
                 ValidateIssuer = true, 
-                ValidateAudience = false, //
+                ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 
