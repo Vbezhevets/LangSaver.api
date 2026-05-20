@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using LangSaver.Application.DTO;
 using LangSaver.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +9,7 @@ public static class WordsEndpoints
 {
 
     public static IEndpointRouteBuilder MapWordsEndpoints(this IEndpointRouteBuilder app)
-    {
+    { 
         var words = app.MapGroup("/words").RequireAuthorization();
 
         words.MapPost("/", async ([FromServices] IWordService service, [FromBody] WordCreateRequest req, HttpContext context) =>
@@ -22,13 +21,37 @@ public static class WordsEndpoints
         });
 
  
-        words.MapGet("/", async ([FromServices]  IWordService service,[FromBody] WordQueryRequest req, HttpContext context) =>
+        words.MapGet("/", async (
+            [FromServices] IWordService service,
+            [FromQuery] string? term,
+            [FromQuery] string? fromLanguage,
+            [FromQuery] string? toLanguage,
+            [FromQuery] string? category,
+            HttpContext context) =>
         {
-            Guid userId = context.GetUserId(); 
+            if (string.IsNullOrWhiteSpace(term))
+                return Results.BadRequest(new { message = "Term is required." });
 
-            var w = await service.QueryAsync(userId, req);
+            if (string.IsNullOrWhiteSpace(fromLanguage))
+                return Results.BadRequest(new { message = "From language is required." });
 
-            return w != null ? Results.Ok(w) : Results.NotFound();
+            if (string.IsNullOrWhiteSpace(toLanguage))
+                return Results.BadRequest(new { message = "To language is required." });
+
+            var userId = context.GetUserId();
+
+            var req = new WordQueryRequest(
+                term.Trim(),
+                fromLanguage.Trim().ToLowerInvariant(),
+                toLanguage.Trim().ToLowerInvariant(),
+                category?.Trim()
+            );
+
+            var word = await service.QueryAsync(userId, req);
+
+            return word != null
+                ? Results.Ok(word)
+                : Results.NotFound();
         });
 
         words.MapGet("/{id}", async (IWordService service, Guid id, HttpContext context) =>

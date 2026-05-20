@@ -81,25 +81,37 @@ public class WordService : IWordService
     }
     public async Task<Word?> QueryAsync(Guid userId, WordQueryRequest request)
     {
-        var word = await FindExistingWord(userId, request);
+        var sourceWord = await FindExistingWord(userId, request);
 
-        if (word == null)
+        if (sourceWord == null)
             return null;
-        
-        var translations = await _db.Words.AsNoTracking()
-            .Where(w=> w.Language == request.ToLanguage &&
-            w.Translations.Any(t=> t.Id == word.Id)).ToListAsync(); // we need to get only asked Language
 
-        var res = CreateWord(word);
-        res.Translations = translations;
-        return res;
-        
-    }
+        var translations = await _db.Words.AsNoTracking()
+            .Where(candidate =>
+                candidate.UserId == userId &&
+                candidate.Language == request.ToLanguage &&
+                candidate.Translations.Any(translation =>
+                    translation.Id == sourceWord.Id))
+            .ToListAsync();
+
+        var result = new Word
+        {
+            Id = sourceWord.Id,
+            UserId = sourceWord.UserId,
+            Term = sourceWord.Term,
+            Language = sourceWord.Language,
+            Category = sourceWord.Category,
+            Translations = translations
+        };
+
+        return result;
+    }   
 
     public async Task<Word?> GetByIdAsync(Guid userId, Guid id)
     {
         return await _db.Words.AsNoTracking()
-                              .FirstOrDefaultAsync(w=> w.UserId == userId && w.Id == id);
+            .Include(w => w.Translations)
+            .FirstOrDefaultAsync(w => w.UserId == userId && w.Id == id);
     }
 
     public async Task <bool> DeleteAsync(Guid userId, Guid id)

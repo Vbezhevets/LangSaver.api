@@ -4,7 +4,7 @@ public interface ITranslatorService
 {
     Task<string?> TranslateAsync (
         string text,
-        string FromLanguage,
-        string ToLanguage
+        string fromLanguage,
+        string toLanguage
     );
 }
