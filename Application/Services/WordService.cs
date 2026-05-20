@@ -94,7 +94,7 @@ public class WordService : IWordService
                     translation.Id == sourceWord.Id))
             .ToListAsync();
 
-        var result = new Word
+        var result = new Word //create a new for res cause we need specific transl language (todo DTO)
         {
             Id = sourceWord.Id,
             UserId = sourceWord.UserId,

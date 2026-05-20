@@ -22,9 +22,16 @@ public static class ServiceCollectionExtensions
     {
         services.AddAuthorization(); //регистрируем стандартный сервис -лайфтайм уже внутри потому что стандартный сервис от asp
         services.AddScoped<IWordService, WordService>();
-        services.AddScoped<ITranslatorService, TranslatorService>();
-        services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.AddHttpClient<ITranslatorService, LibreTranslateService>((serviceProvider, client) =>
+        {
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+            var baseUrl = configuration["LibreTranslate:BaseUrl"]
+                ?? throw new InvalidOperationException("LibreTranslate:BaseUrl is missing.");
 
+            client.BaseAddress = new Uri(baseUrl);
+        });
+        services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.AddHttpClient<ITranslatorService, LibreTranslateService>();
         services.AddSingleton<JwtService>(); // создается раз содержит только конфигурацию
 
         return services;
