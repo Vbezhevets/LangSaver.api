@@ -3,6 +3,7 @@ using LangSaver.Application.Exceptions;
 using LangSaver.Application.Interfaces;
 using LangSaver.Domain;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace LangSaver.Application.Services;
 
@@ -26,10 +27,12 @@ public class WordService : IWordService
         if (existingWord != null)
             throw new Exception($"Word already exists with id {existingWord.Id}");
 
-        var translatedText = await _translator.TranslateAsync(
-            request.Term,
-            request.FromLanguage,
-            request.ToLanguage
+        var translatedText = !string.IsNullOrWhiteSpace(request.Translation) ?
+            request.Translation
+            : await _translator.TranslateAsync(
+                request.Term,
+                request.FromLanguage,
+                request.ToLanguage
         );
 
         if (string.IsNullOrWhiteSpace(translatedText))
@@ -190,5 +193,67 @@ public class WordService : IWordService
                     translation.Category))
                 .ToList()
         );
+    }
+public async Task<string> ExportCsvAsync(Guid userId, string language)
+{
+    var normalizedLanguage = language.Trim().ToLowerInvariant();
+
+    var words = await _db.Words
+        .AsNoTracking()
+        .Include(w => w.Translations)
+        .Where(w =>
+            w.UserId == userId &&
+            w.Language == normalizedLanguage)
+        .OrderBy(w => w.Category)
+        .ThenBy(w => w.Term)
+        .ToListAsync();
+
+    var csv = new StringBuilder();
+
+    csv.AppendLine("Term,Translation,TranslationLanguage,Category");
+
+    foreach (var word in words)
+    {
+        if (word.Translations.Count == 0)
+        {
+            csv.AppendLine(string.Join(",",
+                EscapeCsv(word.Term),
+                "",
+                "",
+                EscapeCsv(word.Category)
+            ));
+
+            continue;
+        }
+
+        foreach (var translation in word.Translations)
+        {
+            csv.AppendLine(string.Join(",",
+                EscapeCsv(word.Term),
+                EscapeCsv(translation.Term),
+                EscapeCsv(translation.Language),
+                EscapeCsv(word.Category)
+            ));
+        }
+    }
+
+    return csv.ToString();
+}
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "";
+
+        var mustQuote = value.Contains(',')
+            || value.Contains('"')
+            || value.Contains('\n')
+            || value.Contains('\r');
+
+        var escaped = value.Replace("\"", "\"\"");
+
+        return mustQuote
+            ? $"\"{escaped}\""
+            : escaped;
     }
 }

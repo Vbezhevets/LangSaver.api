@@ -11,6 +11,7 @@ public  interface IWordService
 
     Task <WordResponse?> PatchAsync(Guid userId, Guid id, WordPatchRequest req);
     Task <bool> DeleteAsync(Guid userId, Guid id);
+    Task<string> ExportCsvAsync(Guid userId, string language);
 
 
 }

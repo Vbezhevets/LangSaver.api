@@ -1,6 +1,7 @@
 using LangSaver.Application.DTO;
 using LangSaver.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
 
 
 namespace LangSaver.Api;
@@ -82,7 +83,28 @@ public static class WordsEndpoints
             return  res ? Results.NoContent() : Results.NotFound();
         });
 
+        words.MapGet("/export/csv", async (
+            [FromServices] IWordService service,
+            [FromQuery] string? language,
+            HttpContext context) =>
+        {
+            if (string.IsNullOrWhiteSpace(language))
+                return Results.BadRequest(new { message = "Language query parameter is required." });
+
+            var userId = context.GetUserId();
+
+            var csv = await service.ExportCsvAsync(userId, language);
+            var bytes = Encoding.UTF8.GetBytes(csv);
+
+            return Results.File(
+                bytes,
+                contentType: "text/csv",
+                fileDownloadName: $"langsaver-words-{language}.csv"
+            );
+        });
         return app;
+
     }
+    
 }
 

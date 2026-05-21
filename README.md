@@ -8,10 +8,12 @@ Backend project built with ASP.NET Core for managing a personal vocabulary datab
 Currently implemented:
 - User registration and login
 - JWT-based authentication
-- Protected word endpoints
+- Protected vocabulary endpoints
 - Word creation, lookup, category update and deletion
-- Basic translation workflow with a temporary mock translator
+- Manual translation input with optional automatic suggestion via LibreTranslate / Argos Translate
 - PostgreSQL integration with Entity Framework Core
+- DTO-based API responses
+- Export words to CSV file 
  
 ## Tech stack
 - ASP.NET Core (.NET 8)
