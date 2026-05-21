@@ -12,10 +12,13 @@ public class LangSaverDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<User>()
-            .HasIndex(u => u.Email) // по какому юник полю создавть индекс
+            .HasIndex(u => u.Email)
             .IsUnique();
         modelBuilder.Entity<User>()
             .Property(u => u.Email)
             .IsRequired();
+        // modelBuilder.Entity<Word>()
+        //     .HasMany(w => w.Translations)
+        //     .WithMany();
     }
 }

@@ -1,17 +1,16 @@
 using LangSaver.Application.DTO;
+using LangSaver.Application.Exceptions;
 using LangSaver.Application.Interfaces;
 using LangSaver.Domain;
 using Microsoft.EntityFrameworkCore;
-using LangSaver.Application.Exceptions;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
-using System.Text.RegularExpressions;
 
 namespace LangSaver.Application.Services;
 
 public class WordService : IWordService
 {
-    private readonly LangSaverDbContext _db; 
+    private readonly LangSaverDbContext _db;
     private readonly ITranslatorService _translator;
+
     private record Lookup(string Term, string Language, string? Category) : IWordLookupRequest;
 
     public WordService(LangSaverDbContext db, ITranslatorService translator)
@@ -19,19 +18,119 @@ public class WordService : IWordService
         _db = db;
         _translator = translator;
     }
-    private Word CreateWord(Guid userId, IWordLookupRequest request)
+
+    public async Task<WordResponse> CreateAsync(Guid userId, WordCreateRequest request)
     {
-        return new Word 
-        {
-            UserId = userId,
-            Term = request.Term,
-            Language =  request.Language,
-            Category =  request.Category
-        };
+        var existingWord = await FindExistingWord(userId, request);
+
+        if (existingWord != null)
+            throw new Exception($"Word already exists with id {existingWord.Id}");
+
+        var translatedText = await _translator.TranslateAsync(
+            request.Term,
+            request.FromLanguage,
+            request.ToLanguage
+        );
+
+        if (string.IsNullOrWhiteSpace(translatedText))
+            throw new TranslationFailedException("Translation failed");
+
+        var sourceWord = CreateWord(userId, request);
+
+        var translatedWord = await FindOrCreateTranslatedWord(
+            userId,
+            new Lookup(
+                translatedText,
+                request.ToLanguage,
+                request.Category
+            )
+        );
+
+        await _db.Words.AddAsync(sourceWord);
+        await _db.SaveChangesAsync();
+
+        sourceWord.Translations.Add(translatedWord);
+        translatedWord.Translations.Add(sourceWord);
+
+        await _db.SaveChangesAsync();
+
+        return ToResponse(sourceWord);
     }
-    private Word CreateWord(Word word)
+
+    public async Task<WordResponse?> QueryAsync(Guid userId, WordQueryRequest request)
     {
-        return CreateWord(word.UserId, new Lookup(word.Term, word.Language, word.Category) );
+        var sourceWord = await FindExistingWord(userId, request);
+
+        if (sourceWord == null)
+            return null;
+
+        var translations = await _db.Words
+            .AsNoTracking()
+            .Where(candidate =>
+                candidate.UserId == userId &&
+                candidate.Language == request.ToLanguage &&
+                candidate.Translations.Any(translation =>
+                    translation.Id == sourceWord.Id))
+            .ToListAsync();
+
+        var result = new Word
+        {
+            Id = sourceWord.Id,
+            UserId = sourceWord.UserId,
+            Term = sourceWord.Term,
+            Language = sourceWord.Language,
+            Category = sourceWord.Category,
+            Translations = translations
+        };
+
+        return ToResponse(result);
+    }
+
+    public async Task<WordResponse?> GetByIdAsync(Guid userId, Guid id)
+    {
+        var word = await _db.Words
+            .AsNoTracking()
+            .Include(w => w.Translations)
+            .FirstOrDefaultAsync(w =>
+                w.UserId == userId &&
+                w.Id == id);
+
+        return ToNullableResponse(word);
+    }
+
+    public async Task<WordResponse?> PatchAsync(Guid userId, Guid id, WordPatchRequest request)
+    {
+        var word = await _db.Words
+            .Include(w => w.Translations)
+            .FirstOrDefaultAsync(w =>
+                w.UserId == userId &&
+                w.Id == id);
+
+        if (word == null)
+            return null;
+
+        if (request.Category != null)
+            word.Category = request.Category;
+
+        await _db.SaveChangesAsync();
+
+        return ToResponse(word);
+    }
+
+    public async Task<bool> DeleteAsync(Guid userId, Guid id)
+    {
+        var existingWord = await _db.Words
+            .FirstOrDefaultAsync(w =>
+                w.UserId == userId &&
+                w.Id == id);
+
+        if (existingWord == null)
+            return false;
+
+        _db.Words.Remove(existingWord);
+        await _db.SaveChangesAsync();
+
+        return true;
     }
 
     private async Task<Word?> FindExistingWord(Guid userId, IWordLookupRequest request)
@@ -46,103 +145,50 @@ public class WordService : IWordService
 
     private async Task<Word> FindOrCreateTranslatedWord(Guid userId, IWordLookupRequest request)
     {
-        var word = await FindExistingWord(userId, request);
-        if (word != null)
-            return word;
-
-        word = CreateWord(userId, request);
-
-        await _db.Words.AddAsync(word);
-        return word;
-    }
-    public async Task<Word> CreateAsync(Guid userId, WordCreateRequest request)
-    {
         var existingWord = await FindExistingWord(userId, request);
 
         if (existingWord != null)
-            throw new Exception($"Word already exists with id {existingWord.Id}");
+            return existingWord;
 
-        var translatedText = await _translator.TranslateAsync(request.Term, request.FromLanguage, request.ToLanguage);
+        var word = CreateWord(userId, request);
 
-        if (translatedText == null)
-            throw new TranslationFailedException("Translation failed");
-
-        var sourceWord = CreateWord(userId, request);
-
-        var translatedWord = await FindOrCreateTranslatedWord(userId, new Lookup(translatedText, request.ToLanguage, request.Category)); // find mirror word in requested lang  
-
-        sourceWord.Translations.Add(translatedWord);
-        translatedWord.Translations.Add(sourceWord);
-
-        await _db.Words.AddAsync(sourceWord);
-        await _db.SaveChangesAsync();
-
-        return sourceWord;
-    }
-    public async Task<Word?> QueryAsync(Guid userId, WordQueryRequest request)
-    {
-        var sourceWord = await FindExistingWord(userId, request);
-
-        if (sourceWord == null)
-            return null;
-
-        var translations = await _db.Words.AsNoTracking()
-            .Where(candidate =>
-                candidate.UserId == userId &&
-                candidate.Language == request.ToLanguage &&
-                candidate.Translations.Any(translation =>
-                    translation.Id == sourceWord.Id))
-            .ToListAsync();
-
-        var result = new Word //create a new for res cause we need specific transl language (todo DTO)
-        {
-            Id = sourceWord.Id,
-            UserId = sourceWord.UserId,
-            Term = sourceWord.Term,
-            Language = sourceWord.Language,
-            Category = sourceWord.Category,
-            Translations = translations
-        };
-
-        return result;
-    }   
-
-    public async Task<Word?> GetByIdAsync(Guid userId, Guid id)
-    {
-        return await _db.Words.AsNoTracking()
-            .Include(w => w.Translations)
-            .FirstOrDefaultAsync(w => w.UserId == userId && w.Id == id);
-    }
-
-    public async Task <bool> DeleteAsync(Guid userId, Guid id)
-    {
-        var existingWord = await _db.Words
-                              .FirstOrDefaultAsync(w=> w.UserId == userId && w.Id == id);  
-        if (existingWord == null)
-            return false;
-        _db.Words.Remove(existingWord);
-        await _db.SaveChangesAsync();
-
-        return true;
-    }
-
-    public async Task<Word?> PatchAsync(Guid userId, Guid id, WordPatchRequest req)
-    {
-        var word = await _db.Words.FirstOrDefaultAsync(w =>
-            w.UserId == userId &&
-            w.Id == id
-        );
-
-        if (word == null)
-            return null;
-
-        if (req.Category != null)
-            word.Category = req.Category;
-
-        await _db.SaveChangesAsync();
+        await _db.Words.AddAsync(word);
 
         return word;
     }
 
+    private static Word CreateWord(Guid userId, IWordLookupRequest request)
+    {
+        return new Word
+        {
+            UserId = userId,
+            Term = request.Term,
+            Language = request.Language,
+            Category = request.Category
+        };
+    }
 
+    private static WordResponse? ToNullableResponse(Word? word)
+    {
+        return word == null
+            ? null
+            : ToResponse(word);
+    }
+
+    private static WordResponse ToResponse(Word word)
+    {
+        return new WordResponse(
+            word.Id,
+            word.Term,
+            word.Language,
+            word.Category,
+            word.Translations
+                .Select(translation => new TranslationResponse(
+                    translation.Id,
+                    translation.Term,
+                    translation.Language,
+                    translation.Category))
+                .ToList()
+        );
+    }
 }

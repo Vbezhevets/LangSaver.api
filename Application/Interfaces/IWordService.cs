@@ -5,11 +5,11 @@ namespace LangSaver.Application.Interfaces;
 
 public  interface IWordService
 {
-    Task<Word> CreateAsync(Guid userId, WordCreateRequest req);
-    Task<Word?> QueryAsync(Guid userId, WordQueryRequest req);
-    Task<Word?> GetByIdAsync(Guid userId, Guid id);
+    Task<WordResponse> CreateAsync(Guid userId, WordCreateRequest req);
+    Task<WordResponse?> QueryAsync(Guid userId, WordQueryRequest req);
+    Task<WordResponse?> GetByIdAsync(Guid userId, Guid id);
 
-    Task <Word?> PatchAsync(Guid userId, Guid id, WordPatchRequest req);
+    Task <WordResponse?> PatchAsync(Guid userId, Guid id, WordPatchRequest req);
     Task <bool> DeleteAsync(Guid userId, Guid id);
 
 
